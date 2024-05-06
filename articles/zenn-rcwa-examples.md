@@ -15,6 +15,15 @@ published: false
 - OS: ubuntu22.04
 - python: 3.10
 
+適当なdirectory に展開する。
+```
+mkdir ~dists
+cd dists
+tar xvf ~/Downloads/rodis.tar.gz
+cd rodis
+```
+machine_cfg.py を編集する
+
 ```py:machine_cfg.py
 # This Python script contains all the machine dependent settings
 # needed during the build process.
@@ -44,7 +53,7 @@ library_dirs    = ["/lib/", "/usr/lib/", "/usr/lib/python3.10/"]
 		
 # Library names.
 
-libs            = [ "python3.10" ,"boost_python" ]
+libs            = [ "python3.10" ,"boost_python310" ]
 
 # Command to strip library of excess symbols.
 
@@ -71,7 +80,7 @@ def find_all_files(path, name):
 
 # all documentation
 
-docpath	        = "/home/XXXXX/download/rodis/"
+docpath	        = "/home/XXXXX/dists/rodis/"
 doclist         = []
 docname         = "doc"
 
@@ -82,21 +91,107 @@ find_all_files(docpath, docname)
 extra_files     = doclist 
 
 ```
+必要なソフトウェアをインストールします。
+```
+sudo apt install scons
+sudo apt install libboost-python-dev
+```
 
-適当なdirectory に展開する。
-```
-mkdir ~dists
-cd dists
-tar xvf ~/Downloads/rodis.tar.gz
-```
-``` libboost_python310.so ``` がinstall されていたので```、libboost_python.so``` にリンクする
-```
-/usr/lib/x86_64-linux-gnu$ sudo ln -s libboost_python310.so libboost_python.so
-```
-rodis をビルドする。
+rodis をビルドします。
 ```
 cd ~/dists/rodis
 python3 setup.py build
+```
+rodisはpython2で実装されているためpython3に変換が必要な部分があります。
+```
+~/dists/rodis/examples$ grep print *.py
+grating1DL.py:print cratch.diffr_eff().R(-1)
+grating1DL.py:print cratch.diffr_eff().T(0)
+grating1DL.py:print cratch.field().R_TM(1)
+grating1DL.py:print abs(cratch.field().R_TE(2))
+grating1DL.py:print cratch.field().T_TE(3).real
+grating1DL.py:print cratch.field().T_TM(4).imag
+grating1D.py:print grating.diffr_eff()
+grating1D.py:print grating.diffr_eff().R(-1)
+grating1D.py:print grating.diffr_eff().T(0)
+grating1D.py:print grating.field().R(2)
+grating1D.py:print grating.field().T(3)
+grating2D.py:print device.diffr_eff().R(0,-1)
+grating2D.py:print device.diffr_eff().T(2,1)
+grating2D.py:print device.field().R_TM(0,1)
+grating2D.py:print device.field().R_TE(-1,1)
+grating2D.py:print device.field().T_TM(0,0)
+gratingPsi.py:    print >> outfile, i ,"\t", abs(grating.field().R_TM(0))
+```
+```
+~/dists/rodis$ grep print *.py
+rodis_ui.py:        print "WARNING", p , " should be TM or TE "
+rodis_ui.py:            print "WARNING adding two objects with different period :"
+rodis_ui.py:            print "\t 1) ", self.expr[0], "\t 2) ", other.expr[0]
+rodis_ui.py:            print "\t the period of the first layer of the stack will be used"
+rodis_ui.py:            print "WARNING first layer is not homogenous"
+rodis_ui.py:            print "\t first material of first slab is taken"
+rodis_ui.py:            print "WARNING last layer is not homogenous"
+rodis_ui.py:            print "\t first material of first slab is taken"
+```
+これらを以下のように書き換えます。
+```
+~/dists/rodis/examples$ grep print *.py
+grating1DL.py:print( cratch.diffr_eff().R(-1))
+grating1DL.py:print( cratch.diffr_eff().T(0))
+grating1DL.py:print( cratch.field().R_TM(1))
+grating1DL.py:print( abs(cratch.field().R_TE(2)))
+grating1DL.py:print( cratch.field().T_TE(3).real)
+grating1DL.py:print( cratch.field().T_TM(4).imag)
+grating1D.py:print( grating.diffr_eff())
+grating1D.py:print( grating.diffr_eff().R(-1))
+grating1D.py:print( grating.diffr_eff().T(0))
+grating1D.py:print( grating.field().R(2))
+grating1D.py:print( grating.field().T(3))
+grating2D.py:print( device.diffr_eff().R(0,-1))
+grating2D.py:print( device.diffr_eff().T(2,1))
+grating2D.py:print( device.field().R_TM(0,1))
+grating2D.py:print( device.field().R_TE(-1,1))
+grating2D.py:print( device.field().T_TM(0,0))
+gratingPsi.py:    print("{}{}{}".format(i ,"\t", abs(grating.field().R_TM(0))), file=outfile)
+```
+```
+~/dists/rodis$ grep print *.py
+rodis_ui.py:        print("WARNING", p , " should be TM or TE ")
+rodis_ui.py:            print("WARNING adding two objects with different period :")
+rodis_ui.py:            print("\t 1) ", self.expr[0], "\t 2) ", other.expr[0])
+rodis_ui.py:            print("\t the period of the first layer of the stack will be used")
+rodis_ui.py:            print("WARNING first layer is not homogenous")
+rodis_ui.py:            print("\t first material of first slab is taken")
+rodis_ui.py:            print("WARNING last layer is not homogenous")
+rodis_ui.py:            print("\t first material of first slab is taken")
+```
+setup.py の63,64行を削除します。
+```py:setup.py
+    51	# Set up the module.
+    52	
+    53	setup(name         = "rodis",
+    54	      version      =  rodis_version,
+    55	      description  = "rozen & distels",
+    56	      author       = "see manual",
+    57	      author_email = "see url",
+    58	      url          = "http://photonics.intec.ugent.be",
+    59	      extra_path   = "rodis",
+    60	      packages     = ["examples"],
+    61	      data_files   = [(".", ["rodis_version.py",
+    62	                             "rodis_ui.py",
+    63	                             "D:\\progra~1/Intel/Compiler70/IA32/Lib/libmmd.dll",
+    64	                             "D:\\lib/boost/boost_1_29_0/libs/python/build/bin/boost_python.dll/intel-win32/release/runtime-link-dynamic/boost_python.dll",
+    65	                             "rodis/__init__.py",
+    66	                             "rodis/_rodis" + dllsuffix ])] + extra_files,
+    67	      cmdclass     = {"install_data" : rodis_install_data,
+    68	                      "build"        : rodis_build},
+    69	      )
+```
+
+rodis をインストールします。
+```
+sudo python3 setup.py install
 ```
 
 ### バイナリ格子のRCWA解析
@@ -194,6 +289,17 @@ def main():
 if __name__ == "__main__":
     main()
 ```
+
+例題実行のために必要なソフトウェアをインストールします。
+```
+sudo apt install python3-pip
+python3 -m pip install numpy
+python3 -m pip install matplotlib
+sudo apt install imagemagick-6.q16hdri
+```
+最後のimagemagickはdisplayコマンドのためにインストールしました。
+生成したpngファイルを表示できます。
+
 実行するには以下のようにします。
 ```
 python3 test01.py
@@ -240,6 +346,11 @@ $ diff test01.py test04.py
 ```
 test04.pyの実行結果を以下にしめします。
 ![](/images/Moharam/moharam1995_10lambda_50lambda.png)
+
 ### まとめ
+- RCWA解析を可能とする光シミュレータのひとつであるrodisのインストール手順を示した。
+- rodisを用いてMoharamの論文の例題を実行し、解析家㏍を示した。
+- 1次元の格子に対して、TE,TM,Conicalのそれぞれの光入射条件でMoharamの論文の特性を再現した。
+  
 ## 参考文献
 - M. G. Moharam, E. B. Grann, D. A. Pommet, and T. K. Gaylord, “Formulation for stable and eﬃcient implementation of the rigorous coupled-wave analysis of binary gratings,” J. Opt. Soc. Am. A 12(5), pp. 1068–1076, 1995
