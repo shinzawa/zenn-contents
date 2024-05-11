@@ -5,24 +5,28 @@ type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["rodis","rcwa"]
 published: false
 ---
-## Rodisでバイナリ格子のRCWA解析を行う
+# Rodisでバイナリ格子のRCWA解析を行う
+## はじめに
+　この記事では、Rodisでバイナリ格子のRCWA解析を行う手順を紹介します。
 参考：["Rigorous coupled-wave analysis (RCWA) of binary gratings using RODIS"](https://elsonliu.wordpress.com/2011/08/28/rigorous-coupled-wave-analysis-rcwa-of-binary-gratings-using-rodis/)
-### Rodisのインストール
+で既に10数年前に行われていますが、最近のOS（ubuntu 22.04）で実行できるように必要な修正を行いました。
+　まず、Rodisのインストール手順を示します。次に、Rodisを用いて、Moharamの論文の例題を実行し、解析結果を示します。最後に、まとめます。
+## Rodisのインストール
 [rodis のソース](http://photonics.intec.ugent.be/research/facilities/design/rodis/)
-ここにwindows と unix の source code が別々に置いてある。
-今回は unix の方(rodis.tar.gz)をdown load する。
+ここにwindows と unix の source code が別々に置いてあります。
+今回は unix の方(rodis.tar.gz)をdown load します。
 
 - OS: ubuntu22.04
 - python: 3.10
 
-適当なdirectory に展開する。
+適当なdirectory に展開します。
 ```
 mkdir ~dists
 cd dists
 tar xvf ~/Downloads/rodis.tar.gz
 cd rodis
 ```
-machine_cfg.py を編集する
+machine_cfg.py を自分の環境に合わせて編集します。
 
 ```py:machine_cfg.py
 # This Python script contains all the machine dependent settings
@@ -102,7 +106,7 @@ rodis をビルドします。
 cd ~/dists/rodis
 python3 setup.py build
 ```
-rodisはpython2で実装されているためpython3に変換が必要な部分があります。
+rodisはpython2で実装されているためpython3ではエラーになる部分があります。
 ```
 ~/dists/rodis/examples$ grep print *.py
 grating1DL.py:print cratch.diffr_eff().R(-1)
@@ -123,6 +127,7 @@ grating2D.py:print device.field().R_TE(-1,1)
 grating2D.py:print device.field().T_TM(0,0)
 gratingPsi.py:    print >> outfile, i ,"\t", abs(grating.field().R_TM(0))
 ```
+
 ```
 ~/dists/rodis$ grep print *.py
 rodis_ui.py:        print "WARNING", p , " should be TM or TE "
@@ -134,7 +139,7 @@ rodis_ui.py:            print "\t first material of first slab is taken"
 rodis_ui.py:            print "WARNING last layer is not homogenous"
 rodis_ui.py:            print "\t first material of first slab is taken"
 ```
-これらを以下のように書き換えます。
+以上がpython2の部分です。それらをpython3用に変換する必要があります。以下のように書き換えます。
 ```
 ~/dists/rodis/examples$ grep print *.py
 grating1DL.py:print( cratch.diffr_eff().R(-1))
@@ -166,7 +171,7 @@ rodis_ui.py:            print("\t first material of first slab is taken")
 rodis_ui.py:            print("WARNING last layer is not homogenous")
 rodis_ui.py:            print("\t first material of first slab is taken")
 ```
-setup.py の63,64行を削除します。
+setup.py の設定で63,64行を削除します。
 ```py:setup.py
     51	# Set up the module.
     52	
@@ -194,9 +199,10 @@ rodis をインストールします。
 sudo python3 setup.py install
 ```
 
-### バイナリ格子のRCWA解析
+## バイナリ格子のRCWA解析
 
 実行するためのpython入力ファイルtest01.pyは以下の通りです。
+### 実行スクリプト（test01.py）
 ```py:test01.py
 #!/usr/bin/env python
 # coding: utf-8
@@ -304,10 +310,11 @@ sudo apt install imagemagick-6.q16hdri
 ```
 python3 test01.py
 ```
-test01.py の実行結果を以下にしめします。
+### test01.py の実行結果
+test01.py の実行結果を以下に示します。
 ![](/images/Moharam/moharam1995_lambda_5lambda.png)
 
-つぎに条件を変更したtest02.pyとの差分をしめします。
+つぎに条件を変更したtest02.pyとの差分を示します。
 ```
 $ diff test01.py test02.py 
 72c72
@@ -316,10 +323,11 @@ $ diff test01.py test02.py
 >     depths = numpy.linspace(45.,50.,100)*wavelength
 
 ```
+### test02.py の実行結果
 test02.pyの実行結果を以下にしめします。
 ![](/images/Moharam/moharam1995_lambda_50lambda.png)
 
-つぎに条件を変更したtest03.pyとの差分をしめします。
+つぎに条件を変更したtest03.pyとの差分を示します。
 ```$ diff test01.py test03.py 
 68c68
 <     multiplier = 1
@@ -328,10 +336,11 @@ test02.pyの実行結果を以下にしめします。
 
 
 ```
-test03.pyの実行結果を以下にしめします。
+### test03.py の実行結果
+test03.pyの実行結果を以下に示します。
 ![](/images/Moharam/moharam1995_10lambda_5lambda.png)
 
-最後に4つ目の、test04.pyとの差分をしめします。
+最後に4つ目の、test04.pyとの差分を示します。
 ```
 $ diff test01.py test04.py
 68c68
@@ -344,13 +353,14 @@ $ diff test01.py test04.py
 >     depths = numpy.linspace(45.,50.,100)*wavelength
 
 ```
-test04.pyの実行結果を以下にしめします。
+### test04.py の実行結果
+test04.pyの実行結果を以下に示します。
 ![](/images/Moharam/moharam1995_10lambda_50lambda.png)
 
-### まとめ
-- RCWA解析を可能とする光シミュレータのひとつであるrodisのインストール手順を示した。
-- rodisを用いてMoharamの論文の例題を実行し、解析家㏍を示した。
-- 1次元の格子に対して、TE,TM,Conicalのそれぞれの光入射条件でMoharamの論文の特性を再現した。
+## まとめ
+- RCWA解析を可能とする光シミュレータのひとつであるrodisのインストール手順を示しました。
+- rodisを用いてMoharamの論文の例題を実行し、解析結果を示しました。
+- 解析結果は 1次元の格子に対して、TE,TM,Conicalのそれぞれの光入射条件でMoharamの論文の特性を再現しました。
   
 ## 参考文献
 - M. G. Moharam, E. B. Grann, D. A. Pommet, and T. K. Gaylord, “Formulation for stable and eﬃcient implementation of the rigorous coupled-wave analysis of binary gratings,” J. Opt. Soc. Am. A 12(5), pp. 1068–1076, 1995
