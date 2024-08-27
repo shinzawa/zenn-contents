@@ -180,10 +180,10 @@ rodis_10lambda_50depth.py の実行結果を以下に示します。
 ![](/images/Moharum_1995/rodis_10lambda_50depth.png)
 
 ## まとめ
-- RCWA解析を可能とする光シミュレータのひとつであるS4_pyextのインストール手順を示しました。
+- RCWA解析を可能とする光シミュレータのひとつであるS4_pyextのインストール方法の参照先を示しました。
 - S4_pyextを用いてMoharamの論文の例題を実行し、解析結果を示しました。
-- 解析結果は 1次元の格子に対して、TE,TMのそれぞれの光入射条件でMoharamの論文の特性をほぼ、再現しました。TMでは若干ずれが生じました。
-- Conicalでは結果が得られませんでした。
+- 解析結果は 1次元の格子に対して、TE,TMおよびConicalのそれぞれの光入射条件でMoharamの論文の特性をほぼ、再現しました。TMでは若干ずれが生じました。
+
   
 ## 参考文献
 - M. G. Moharam, E. B. Grann, D. A. Pommet, and T. K. Gaylord, “Formulation for stable and eﬃcient implementation of the rigorous coupled-wave analysis of binary gratings,” J. Opt. Soc. Am. A 12(5), pp. 1068–1076, 1995
