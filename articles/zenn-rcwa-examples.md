@@ -339,6 +339,7 @@ test02.pyの実行結果を以下にしめします。
 ### test03.py の実行結果
 test03.pyの実行結果を以下に示します。
 ![](/images/Moharam/moharam1995_10lambda_5lambda.png)
+黒色のconicalのデータが表示されていません。
 
 最後に4つ目の、test04.pyとの差分を示します。
 ```
@@ -356,11 +357,11 @@ $ diff test01.py test04.py
 ### test04.py の実行結果
 test04.pyの実行結果を以下に示します。
 ![](/images/Moharam/moharam1995_10lambda_50lambda.png)
-
+こちらでも、黒色のconicalのデータが表示されていないことがわかります。
 ## まとめ
 - RCWA解析を可能とする光シミュレータのひとつであるrodisのインストール手順を示しました。
 - rodisを用いてMoharamの論文の例題を実行し、解析結果を示しました。
-- 解析結果は 1次元の格子に対して、TE,TM,Conicalのそれぞれの光入射条件でMoharamの論文の特性を再現しました。
+- 解析結果は 1次元の格子に対して、TE,TM,Conicalのそれぞれの光入射条件でMoharamの論文の特性を条件１と２では、再現しました。条件３と４では、Conicalの結果が表示されませんでした。
   
 ## 参考文献
 - M. G. Moharam, E. B. Grann, D. A. Pommet, and T. K. Gaylord, “Formulation for stable and eﬃcient implementation of the rigorous coupled-wave analysis of binary gratings,” J. Opt. Soc. Am. A 12(5), pp. 1068–1076, 1995
