@@ -3,7 +3,7 @@ title: "S4_pyextを用いたバイナリ格子のRCWA解析"
 emoji: "🌈"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["S4", "pyext","rcwa"]
-published: false
+published: true
 ---
 # S4_pyextでバイナリ格子のRCWA解析を試す。
 ## はじめに
