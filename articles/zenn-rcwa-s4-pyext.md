@@ -32,7 +32,8 @@ def run_sim(depth):
     multi = 1.0
     Lambda = wave*multi
     angle = 10.0
-
+    lpsi = 0.7071067811140325
+	
     S = S4.New( Lattice = Lambda, NumBasis = 99 )
 
     # Material definition
@@ -47,12 +48,10 @@ def run_sim(depth):
                          Angle=0,
                          Halfwidths=(0.25*Lambda, 0))
     S.AddLayer(Name='Substrate', Thickness=0, Material='FusedSilica')
-    #S.UseLessMemory();
-    #S.UseLanczosSmoothing(False);
     # E polarized along the grating periodicity direction
     S.SetExcitationPlanewave(IncidenceAngles=(angle,0), sAmplitude=1, pAmplitude=0)
 
-    S.SetFrequency(1/wave)
+    S.SetFrequency(1.0/wave)
 
     incident,backward = S.GetPowerFlux(Layer='AirAbove')
     P = S.GetPowerFluxByOrder(Layer='Substrate')
@@ -66,19 +65,30 @@ def run_sim(depth):
     P = S.GetPowerFluxByOrder('Substrate', 0)
     de_TM = P[2][0].real/incident.real
 
-    return de_TE, de_TM
+    # Conical polarized along the grating periodicity direction
+    S.SetExcitationPlanewave(IncidenceAngles=(angle,30), sAmplitude=lpsi, pAmplitude=lpsi)
 
-print('depth', 'TE', 'TM')
+    S.SetFrequency(1/wave)
+    incident,backward = S.GetPowerFlux(Layer='AirAbove')
+    P = S.GetPowerFluxByOrder(Layer='Substrate')
+    de_Conical = P[2][0].real/incident.real
+    
+    return de_TE, de_TM, de_Conical
+
+print('depth', 'TE', 'TM', 'Conical')
 for i in range(99):
     depth=0.0+i*0.05
-    (de_TE, de_TM)=run_sim(depth)
-    print(depth, de_TE, de_TM)
+    (de_TE, de_TM, de_Conical)=run_sim(depth)
+    print(depth, de_TE, de_TM, de_Conical)
 
-```rodis_01lambda_05depth.gpl
+```
+
+```gpl:rodis_01lambda_05depth.gpl
 set terminal png nocrop enhanced size 640,480 font "arial,12.0" 
-set output 'rodis_10lambda_05depth.png'
-plot [0:5][0:1] "rodis_10lambda_05depth.dat" u 1:2 ti "TE"  w linespoints lt 7 lc 'blue' lw 3.0, \
-	 			"" u 1:3 ti "TM" w linespoints lt 7 lc 'red' lw 3.0
+set output 'rodis_01lambda_05depth.png'
+plot [0:5][0:1] "rodis_01lambda_05depth.dat" u 1:2 ti "TE"  w linespoints lt 7 lc 'blue' lw 3.0,\
+	 			"" u 1:3 ti "TM" w linespoints lt 7 lc 'red' lw 3.0,\
+				"" u 1:4 ti "Conical"  w linespoints lt 7 lc 'black' lw 3.0
 
 ```
 
@@ -93,18 +103,18 @@ rodis_01lambda_05depth.py の実行結果を以下に示します。
 
 つぎに条件を変更したrodis_01lambda_50depth.pyとの差分を示します。
 
-```
-$ diff rodis_01lambda_05depth.py rodis_01lambda_50depth.py
+```diff py:rodis_01lambda_05depth.py, rodis_01lambda_50depth.py
 47c47
 <     depth=0.0+i*0.05
 ---
 >     depth=45.0+i*0.05
 ```
-```rodis_01lambda_50depth.gpl
+```txt: rodis_01lambda_50depth.gpl
 set terminal png nocrop enhanced size 640,480 font "arial,12.0" 
 set output 'rodis_01lambda_50depth.png'
 plot [45:50][0:1] "rodis_01lambda_50depth.dat" u 1:2 ti "TE"  w linespoints lt 7 lc 'blue' lw 3.0, \
-	 			"" u 1:3 ti "TM" w linespoints lt 7 lc 'red' lw 3.0
+	 			"" u 1:3 ti "TM" w linespoints lt 7 lc 'red' lw 3.0,\
+				"" u 1:4 ti "Conical"  w linespoints lt 7 lc 'black' lw 3.0
 ```
 実行するには以下のようにします。
 ```
@@ -117,19 +127,19 @@ rodis_01lambda_50depth.py の実行結果を以下に示します。
 
 つぎに条件を変更したrodis_10lambda_05depth.pyとの差分を示します。
 
-```
-$ diff rodis_01lambda_05depth.py rodis_10lambda_05depth.py 
+```diff py:rodis_01lambda_05depth.py rodis_10lambda_05depth.py 
 6c6
 <     multi = 1.0
 ---
 >     multi = 10.0
 
 ```
-```rodis_10lambda_05depth.gpl
+```txt: rodis_10lambda_05depth.gpl
 set terminal png nocrop enhanced size 640,480 font "arial,12.0" 
 set output 'rodis_10lambda_05depth.png'
 plot [45:50][0:1] "rodis_01lambda_50depth.dat" u 1:2 ti "TE"  w linespoints lt 7 lc 'blue' lw 3.0, \
-	 			"" u 1:3 ti "TM" w linespoints lt 7 lc 'red' lw 3.0
+	 			"" u 1:3 ti "TM" w linespoints lt 7 lc 'red' lw 3.0,\
+				"" u 1:4 ti "Conical"  w linespoints lt 7 lc 'black' lw 3.0
 ```
 実行するには以下のようにします。
 ```
@@ -142,8 +152,7 @@ rodis_10lambda_05depth.py の実行結果を以下に示します。
 
 つぎに条件を変更したrodis_10lambda_50depth.pyとの差分を示します。
 
-```
-$ diff rodis_01lambda_05depth.py rodis_10lambda_50depth.py 
+```diff py:rodis_01lambda_05depth.py rodis_10lambda_50depth.py 
 6c6
 <     multi = 1.0
 ---
@@ -154,11 +163,12 @@ $ diff rodis_01lambda_05depth.py rodis_10lambda_50depth.py
 >     depth=45.0+i*0.05
 
 ```
-```rodis_10lambda_50depth.gpl
+```txt: rodis_10lambda_50depth.gpl
 set terminal png nocrop enhanced size 640,480 font "arial,12.0" 
 set output 'rodis_10lambda_50depth.png'
 plot [45:50][0:1] "rodis_01lambda_50depth.dat" u 1:2 ti "TE"  w linespoints lt 7 lc 'blue' lw 3.0, \
-	 			"" u 1:3 ti "TM" w linespoints lt 7 lc 'red' lw 3.0
+	 			"" u 1:3 ti "TM" w linespoints lt 7 lc 'red' lw 3.0,\
+				"" u 1:4 ti "Conical"  w linespoints lt 7 lc 'black' lw 3.0
 ```
 実行するには以下のようにします。
 ```
@@ -168,3 +178,12 @@ gnuplot rodis_10lambda_50depth.gpl
 ### rodis_10lambda_50depth.py の実行結果
 rodis_10lambda_50depth.py の実行結果を以下に示します。
 ![](/images/Moharum_1995/rodis_10lambda_50depth.png)
+
+## まとめ
+- RCWA解析を可能とする光シミュレータのひとつであるS4_pyextのインストール手順を示しました。
+- S4_pyextを用いてMoharamの論文の例題を実行し、解析結果を示しました。
+- 解析結果は 1次元の格子に対して、TE,TMのそれぞれの光入射条件でMoharamの論文の特性をほぼ、再現しました。TMでは若干ずれが生じました。
+- Conicalでは結果が得られませんでした。
+  
+## 参考文献
+- M. G. Moharam, E. B. Grann, D. A. Pommet, and T. K. Gaylord, “Formulation for stable and eﬃcient implementation of the rigorous coupled-wave analysis of binary gratings,” J. Opt. Soc. Am. A 12(5), pp. 1068–1076, 1995
