@@ -10,7 +10,7 @@ published: true
 前回rodisを用いた、RCWA解析の結果を紹介しましたが[Rodisを用いたバイナリ格子のRCWA解析](https://zenn.dev/tsuza/articles/zenn-rcwa-examples)、そのなかのある条件では、計算が収束せず、グラフに表示されませんでした。
 この記事では、rodisの改修を行い、Moharamの論文の条件での、収束した解析結果を紹介します。
 ## rodisのインストール
-rodisのインストールは、前回の記事で紹介しましたのでそちらをご覧ください。
+rodisのインストールは、前回の記事[Rodisを用いたバイナリ格子のRCWA解析](https://zenn.dev/tsuza/articles/zenn-rcwa-examples)で紹介しましたのでそちらをご覧ください。
 
 ## rodis ソースコードの改修
 前回は、ソースコードの改変なしで、環境設定のみubuntu-22.04に合わせて、RCWA解析を実行しました。ただ、4つある条件のうち、3番目と4番目のConicalでの結果が、収束せず、グラフにはTEとTMしか表示されない状態になりました。解析の結果2次の偏微分方程式（参考文献の例えば式（15））に対応する右辺の行列の固有値を求めた後、その固有値の正の平方根を用いてそのあとの解を表現しているので、ubuntu-22.04の環境で、そうなるように調整します。具体的には、固有値、固有ベクトルを求める関数、CompleEigenの直後で、以下のように、元のコードをコメントアウトして、
@@ -63,163 +63,151 @@ TE,TMも同様に変更して、変化しないことを確認します。
 ## バイナリ格子のRCWA解析
 
 実行するためのpython入力ファイルrodis_01lambda_05depth.pyは以下の通りです。
-### 実行スクリプト（rodis_01lambda_05depth.py）
-```py:rodis_01lambda_05depth.py
-import S4
+### 実行スクリプト（test01.py）
+### 実行スクリプト（test01.py）
+```py:test01.py
+#!/usr/bin/env python
+# coding: utf-8
+# Reproduces Fig. 2 in Moharam, Grann, Pommet, and Gaylord, "Formulation for stable and
+# efficient implementation of the rigorous coupled-wave analysis of binary gratings",
+# J. Opt. Soc. Am. A 12(5), pp. 1068–1076, 1995 (doi:10.1364/JOSAA.12.001068)
 
-def run_sim(depth):
-    n2 = 2.04
-    wave = 1.55
-    multi = 1.0
-    Lambda = wave*multi
-    angle = 10.0
-    lpsi = 0.7071067811140325
-	
-    S = S4.New( Lattice = Lambda, NumBasis = 99 )
-
-    # Material definition
-    S.AddMaterial(Name="FusedSilica", Epsilon=n2**2)
-    S.AddMaterial(Name="Vacuum", Epsilon=1)
-
-    S.AddLayer(Name='AirAbove', Thickness=0, Material='Vacuum')
-    S.AddLayer(Name='Grating', Thickness=depth*wave, Material='Vacuum')
-    S.SetRegionRectangle(Layer='Grating',
-                         Material='FusedSilica',
-                         Center=(0.5*Lambda,0),
-                         Angle=0,
-                         Halfwidths=(0.25*Lambda, 0))
-    S.AddLayer(Name='Substrate', Thickness=0, Material='FusedSilica')
-    # E polarized along the grating periodicity direction
-    S.SetExcitationPlanewave(IncidenceAngles=(angle,0), sAmplitude=1, pAmplitude=0)
-
-    S.SetFrequency(1.0/wave)
-
-    incident,backward = S.GetPowerFlux(Layer='AirAbove')
-    P = S.GetPowerFluxByOrder(Layer='Substrate')
-    de_TE = P[2][0].real/incident.real
-
-    # M polarized along the grating periodicity direction
-    S.SetExcitationPlanewave(IncidenceAngles=(angle,0), sAmplitude=0, pAmplitude=1)
-    S.SetFrequency(1.0/wave)
-
-    incident,backward = S.GetPowerFlux(Layer='AirAbove')
-    P = S.GetPowerFluxByOrder('Substrate', 0)
-    de_TM = P[2][0].real/incident.real
-
-    # Conical polarized along the grating periodicity direction
-    S.SetExcitationPlanewave(IncidenceAngles=(angle,30), sAmplitude=lpsi, pAmplitude=lpsi)
-
-    S.SetFrequency(1/wave)
-    incident,backward = S.GetPowerFlux(Layer='AirAbove')
-    P = S.GetPowerFluxByOrder(Layer='Substrate')
-    de_Conical = P[2][0].real/incident.real
-    
-    return de_TE, de_TM, de_Conical
-
-print('depth', 'TE', 'TM', 'Conical')
-for i in range(99):
-    depth=0.0+i*0.05
-    (de_TE, de_TM, de_Conical)=run_sim(depth)
-    print(depth, de_TE, de_TM, de_Conical)
-
-```
-
-```gpl:rodis_01lambda_05depth.gpl
-set terminal png nocrop enhanced size 640,480 font "arial,12.0" 
-set output 'rodis_01lambda_05depth.png'
-plot [0:5][0:1] "rodis_01lambda_05depth.dat" u 1:2 ti "TE"  w linespoints lt 7 lc 'blue' lw 3.0,\
-	 			"" u 1:3 ti "TM" w linespoints lt 7 lc 'red' lw 3.0,\
-				"" u 1:4 ti "Conical"  w linespoints lt 7 lc 'black' lw 3.0
-
+import rodis
+from math import pi
+import numpy
+import matplotlib.pyplot as plt
+ 
+def moharam(theta_rad,phi_rad,psi_rad,wavelength,ambient,pitch,fillfactor,thicknesses,substrate,norders):
+    # rodis data
+    rodis.set_lambda(wavelength)        # wavelength
+    rodis.set_N(norders)                # orders of diffraction
+    rodis.set_alpha(theta_rad)          # angle of incidence
+    rodis.set_delta(phi_rad)            # 0 for planar diffraction
+    rodis.set_psi(psi_rad)              # polarization angle
+ 
+    solutions = []
+    width = fillfactor*pitch
+    for d in thicknesses:
+        binary = rodis.Slab( ambient(0.5*width) + substrate(width) + ambient(0.5*width) )
+        incident = rodis.Slab( ambient(pitch) )
+        transmission = rodis.Slab( substrate(pitch) )
+        grating = rodis.Stack( incident(1.) + binary(d) + transmission(1.) )
+        grating.calc()
+        solutions.append(grating.diffr_eff().T(1))
+    return solutions
+ 
+ 
+def plot(depths,wavelength,multiplier,TEsolutions,TMsolutions,conicalsolutions):
+    plt.plot(depths/wavelength, TEsolutions, 'b.-', \
+                depths/wavelength, TMsolutions, 'r.-', \
+                depths/wavelength, conicalsolutions, 'k.-', \
+                )
+    plt.xlabel('Normalized groove depth $d/\lambda$')
+    plt.ylabel('Diffraction efficiency $DE_1$')
+ 
+    plt.legend(('TE', 'TM', 'conical  $(\\phi = 30^\circ, \psi = 45^\circ)$'))
+    plt.axis('tight')
+    plt.ylim([0,1])
+    if multiplier == 1:
+        plt.title("First-order transmitted diffraction efficiency\n" + \
+                    "$n_I = 1$, $n_{II} = 2.04$, $\\theta = 10^\circ$, $\\Lambda = \lambda_0$")
+        plt.savefig("moharam1995_lambda_" + str(int(depths[-1]/wavelength)) + "lambda.png")
+        plt.savefig("moharam1995_lambda_" + str(int(depths[-1]/wavelength)) + "lambda.svg")
+    else:
+        plt.title("First-order transmitted diffraction efficiency\n" + \
+                    "$n_I = 1$, $n_{II} = 2.04$, $\\theta = 10^\circ$, $\\Lambda =$ " + \
+                    str(multiplier) + "$\lambda_0$")
+        plt.savefig("moharam1995_"+str(multiplier)+"lambda_" + str(int(depths[-1]/wavelength)) + "lambda.png")
+        plt.savefig("moharam1995_"+str(multiplier)+"lambda_" + str(int(depths[-1]/wavelength)) + "lambda.svg")
+    plt.show()
+ 
+ 
+def main():
+    wavelength = 1.55
+    norders = 15
+    theta = 10.*pi/180  # angle of incidence
+    phi = 30.*pi/180    # 0 for planar diffraction
+ 
+    psi = 45.*pi/180    # polarization angle
+     
+    ambient = rodis.Material(1.0)
+    substrate = rodis.Material(2.04)
+ 
+    multiplier = 1
+    pitch = multiplier*wavelength
+    fill = 0.5
+     
+    depths = numpy.linspace(0.,5.,100)*wavelength
+ 
+    # TE (psi = pi/2)
+    print("TE")
+    TEsolutions = moharam(theta,0.,pi/2,wavelength,ambient,pitch,fill,depths,substrate,norders)
+ 
+    # TM (psi = 0)
+    print("TM")
+    TMsolutions = moharam(theta,0.,0.,wavelength,ambient,pitch,fill,depths,substrate,norders)
+ 
+    # Conical
+    print("Conical: \t phi = %.1f \t psi = %.1f" % (phi*180/pi,psi*180/pi))
+    conicalsolutions = moharam(theta,phi,psi,wavelength,ambient,pitch,fill,depths,substrate,norders)
+ 
+    plot(depths,wavelength,multiplier,TEsolutions,TMsolutions,conicalsolutions)
+ 
+ 
+if __name__ == "__main__":
+    main()
 ```
 
 実行するには以下のようにします。
 ```
-python3 rodis_01lambda_05depth.py
-gnuplot rodis_01lambda_05depth.gpl
+python3 test01.py
 ```
-### rodis_01lambda_05depth.py の実行結果
-rodis_01lambda_05depth.py の実行結果を以下に示します。
+### test01.py の実行結果
+test01.py の実行結果を以下に示します。
 ![](/images/Moharam_1995-2/moharam1995_lambda_5lambda.png)
 
-つぎに条件を変更したrodis_01lambda_50depth.pyとの差分を示します。
-
-```diff py:rodis_01lambda_05depth.py, rodis_01lambda_50depth.py
-47c47
-<     depth=0.0+i*0.05
+つぎに条件を変更したtest02.pyとの差分を示します。
+```
+$ diff test01.py test02.py 
+72c72
+<     depths = numpy.linspace(0.,5.,100)*wavelength
 ---
->     depth=45.0+i*0.05
+>     depths = numpy.linspace(45.,50.,100)*wavelength
+
 ```
-```txt: rodis_01lambda_50depth.gpl
-set terminal png nocrop enhanced size 640,480 font "arial,12.0" 
-set output 'rodis_01lambda_50depth.png'
-plot [45:50][0:1] "rodis_01lambda_50depth.dat" u 1:2 ti "TE"  w linespoints lt 7 lc 'blue' lw 3.0, \
-	 			"" u 1:3 ti "TM" w linespoints lt 7 lc 'red' lw 3.0,\
-				"" u 1:4 ti "Conical"  w linespoints lt 7 lc 'black' lw 3.0
-```
-実行するには以下のようにします。
-```
-python3 rodis_01lambda_50depth.py
-gnuplot rodis_01lambda_50depth.gpl
-```
-### rodis_01lambda_50depth.py の実行結果
-rodis_01lambda_50depth.py の実行結果を以下に示します。
+### test02.py の実行結果
+test02.pyの実行結果を以下にしめします。
 ![](/images/Moharam_1995-2/moharam1995_lambda_50lambda.png)
 
-つぎに条件を変更したrodis_10lambda_05depth.pyとの差分を示します。
-
-```diff py:rodis_01lambda_05depth.py rodis_10lambda_05depth.py 
-6c6
-<     multi = 1.0
+つぎに条件を変更したtest03.pyとの差分を示します。
+```$ diff test01.py test03.py 
+68c68
+<     multiplier = 1
 ---
->     multi = 10.0
+>     multiplier = 10
+
 
 ```
-```txt: rodis_10lambda_05depth.gpl
-set terminal png nocrop enhanced size 640,480 font "arial,12.0" 
-set output 'rodis_10lambda_05depth.png'
-plot [45:50][0:1] "rodis_01lambda_50depth.dat" u 1:2 ti "TE"  w linespoints lt 7 lc 'blue' lw 3.0, \
-	 			"" u 1:3 ti "TM" w linespoints lt 7 lc 'red' lw 3.0,\
-				"" u 1:4 ti "Conical"  w linespoints lt 7 lc 'black' lw 3.0
-```
-実行するには以下のようにします。
-```
-python3 rodis_10lambda_05depth.py
-gnuplot rodis_10lambda_05depth.gpl
-```
-### rodis_10lambda_05depth.py の実行結果
-rodis_10lambda_05depth.py の実行結果を以下に示します。
+### test03.py の実行結果
+test03.pyの実行結果を以下に示します。
 ![](/images/Moharam_1995-2/moharam1995_10lambda_5lambda.png)
 
-つぎに条件を変更したrodis_10lambda_50depth.pyとの差分を示します。
-
-```diff py:rodis_01lambda_05depth.py rodis_10lambda_50depth.py 
-6c6
-<     multi = 1.0
+最後に4つ目の、test04.pyとの差分を示します。
+```
+$ diff test01.py test04.py
+68c68
+<     multiplier = 1
 ---
->     multi = 10.0
-47c47
-<     depth=0.0+i*0.05
+>     multiplier = 10
+72c72
+<     depths = numpy.linspace(0.,5.,100)*wavelength
 ---
->     depth=45.0+i*0.05
+>     depths = numpy.linspace(45.,50.,100)*wavelength
 
 ```
-```txt: rodis_10lambda_50depth.gpl
-set terminal png nocrop enhanced size 640,480 font "arial,12.0" 
-set output 'rodis_10lambda_50depth.png'
-plot [45:50][0:1] "rodis_01lambda_50depth.dat" u 1:2 ti "TE"  w linespoints lt 7 lc 'blue' lw 3.0, \
-	 			"" u 1:3 ti "TM" w linespoints lt 7 lc 'red' lw 3.0,\
-				"" u 1:4 ti "Conical"  w linespoints lt 7 lc 'black' lw 3.0
-```
-実行するには以下のようにします。
-```
-python3 rodis_10lambda_50depth.py
-gnuplot rodis_10lambda_50depth.gpl
-```
-### rodis_10lambda_50depth.py の実行結果
-rodis_10lambda_50depth.py の実行結果を以下に示します。
+### test04.py の実行結果
+test04.pyの実行結果を以下に示します。
 ![](/images/Moharam_1995-2/moharam1995_10lambda_50lambda.png)
-
 ## まとめ
 - Rodisのソースコードの改修方法を紹介しました。
 - 改修したRodisを用いてMoharamの論文の例題を実行し、解析結果を示しました。
