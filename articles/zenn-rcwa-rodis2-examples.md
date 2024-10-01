@@ -64,7 +64,6 @@ TE,TMも同様に変更して、変化しないことを確認します。
 
 実行するためのpython入力ファイルrodis_01lambda_05depth.pyは以下の通りです。
 ### 実行スクリプト（test01.py）
-### 実行スクリプト（test01.py）
 ```py:test01.py
 #!/usr/bin/env python
 # coding: utf-8
