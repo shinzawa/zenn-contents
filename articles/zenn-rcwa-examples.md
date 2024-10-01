@@ -3,7 +3,7 @@ title: "Rodisを用いたバイナリ格子のRCWA解析"
 emoji: "🌈"
 type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["rodis","rcwa"]
-published: false
+published: true
 ---
 # Rodisでバイナリ格子のRCWA解析を行う
 ## はじめに
